@@ -775,10 +775,9 @@ fun GlucoseChart(
                     val fraction = (point.value / cobScale).coerceIn(0.0, 1.0)
                     return Offset(xFor(point.timestamp), iobBottom - (fraction * (iobBottom - iobTop)).toFloat())
                 }
-                if (cobPoints.size >= 2) {
-                    drawPath(buildFillPath(cobPoints.map(::cobOffset), iobBottom), color = cobColor.copy(alpha = 0.2f))
-                }
-                val (pastLine, futureLine) = splitPastFuture(cobLinePoints.map(::cobOffset), xFor(nowTimestamp))
+                val cobOffsets = cobLinePoints.map(::cobOffset)
+                drawPath(buildFillPath(cobOffsets, iobBottom), color = cobColor.copy(alpha = 0.2f))
+                val (pastLine, futureLine) = splitPastFuture(cobOffsets, xFor(nowTimestamp))
                 drawPath(pastLine, color = cobColor, style = Stroke(width = 1.5.dp.toPx()))
                 drawPath(futureLine, color = cobColor, style = Stroke(width = 1.5.dp.toPx(), pathEffect = predictionDash))
             }
