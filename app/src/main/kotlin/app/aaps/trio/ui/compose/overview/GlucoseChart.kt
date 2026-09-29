@@ -761,15 +761,24 @@ fun GlucoseChart(
 
             // COB curve in the IOB strip, on its own grams scale, drawn under IOB.
             val cobPoints = cobPointsAsc.sliceByMillis(viewportStartMillis, viewportEndMillis) { it.timestamp }
-            val maxCobGrams = cobPoints.maxOfOrNull { it.value } ?: 0.0
-            if (cobPoints.size >= 2 && maxCobGrams > 0.0) {
+            val latestCob = cobPointsAsc.lastOrNull()
+            val cobLinePoints = if (latestCob != null && viewportEndMillis > nowTimestamp && latestCob.timestamp < viewportEndMillis) {
+                (cobPointsAsc + GraphDataPoint(viewportEndMillis, latestCob.value))
+                    .sliceByMillis(viewportStartMillis, viewportEndMillis, includeBounds = true) { it.timestamp }
+            } else {
+                cobPoints
+            }
+            val maxCobGrams = cobLinePoints.maxOfOrNull { it.value } ?: 0.0
+            if (cobLinePoints.size >= 2 && maxCobGrams > 0.0) {
                 val cobScale = maxCobGrams.coerceAtLeast(10.0)
-                val cobOffsets = cobPoints.map { point ->
+                fun cobOffset(point: GraphDataPoint): Offset {
                     val fraction = (point.value / cobScale).coerceIn(0.0, 1.0)
-                    Offset(xFor(point.timestamp), iobBottom - (fraction * (iobBottom - iobTop)).toFloat())
+                    return Offset(xFor(point.timestamp), iobBottom - (fraction * (iobBottom - iobTop)).toFloat())
                 }
-                drawPath(buildFillPath(cobOffsets, iobBottom), color = cobColor.copy(alpha = 0.2f))
-                val (pastLine, futureLine) = splitPastFuture(cobOffsets, xFor(nowTimestamp))
+                if (cobPoints.size >= 2) {
+                    drawPath(buildFillPath(cobPoints.map(::cobOffset), iobBottom), color = cobColor.copy(alpha = 0.2f))
+                }
+                val (pastLine, futureLine) = splitPastFuture(cobLinePoints.map(::cobOffset), xFor(nowTimestamp))
                 drawPath(pastLine, color = cobColor, style = Stroke(width = 1.5.dp.toPx()))
                 drawPath(futureLine, color = cobColor, style = Stroke(width = 1.5.dp.toPx(), pathEffect = predictionDash))
             }
